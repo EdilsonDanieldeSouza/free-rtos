@@ -1,0 +1,14 @@
+# Ignorar pastas de build do CCS
+/RAM/
+/FLASH/
+
+# Ignorar cópias/backups locais feitas manualmente
+* - Copia/
+* - Copy/
+
+# Ignorar arquivos temporários do sistema
+Thumbs.db
+.DS_Store
+
+# Opcional: Se quiser ignorar configurações muito específicas do seu usuário no CCS
+# .settings/

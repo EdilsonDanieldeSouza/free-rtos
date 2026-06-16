@@ -1,0 +1,28 @@
+/**
+ * These arguments were used when this file was generated. They will be automatically applied on subsequent loads
+ * via the GUI or CLI. Run CLI with '--help' for additional information on how to override these arguments.
+ * @cliArgs --device "F2837xD" --part "F2837xD_100PTP" --package "F2837xD_100PTP" --context "CPU1" --product "C2000WARE@26.00.00.00"
+ * @v2CliArgs --device "TMS320F28375D" --package "100PTP" --context "CPU1" --product "C2000WARE@26.00.00.00"
+ * @versions {"tool":"1.26.0+4407"}
+ */
+
+/**
+ * Import the modules used in this configuration.
+ */
+const epwm   = scripting.addModule("/driverlib/epwm.js", {}, false);
+const epwm1  = epwm.addInstance();
+const sysctl = scripting.addModule("/driverlib/sysctl.js");
+
+/**
+ * Write custom configuration values to the imported modules.
+ */
+epwm1.$name = "myEPWM0";
+
+/**
+ * Pinmux solution for unlocked pins/peripherals. This ensures that minor changes to the automatic solver in a future
+ * version of the tool will not impact the pinmux you originally saw.  These lines can be completely deleted in order to
+ * re-solve from scratch.
+ */
+epwm1.epwm.$suggestSolution           = "EPWM6";
+epwm1.epwm.epwm_aPin.$suggestSolution = "GPIO10";
+epwm1.epwm.epwm_bPin.$suggestSolution = "GPIO11";
