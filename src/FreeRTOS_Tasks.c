@@ -1,5 +1,11 @@
-
 #include "FreeRTOS_Tasks.h"
+#include "driverlib.h"
+#include "device.h"
+
+uint16_t loopCounter = 0;
+
+#define LED_RED_GPIO   DEVICE_GPIO_PIN_LED1  
+#define LED_BLUE_GPIO  DEVICE_GPIO_PIN_LED2  
 
 StaticTask_t Task1Buffer, Task2Buffer;
 StackType_t  Task1Stack[STACK_SIZE], Task2Stack[STACK_SIZE];
@@ -7,91 +13,125 @@ StackType_t  Task1Stack[STACK_SIZE], Task2Stack[STACK_SIZE];
 StaticTask_t TaskIdleBuffer;
 StackType_t  TaskIdleStack[STACK_SIZE];
 
-
 SemaphoreHandle_t Semaphore = NULL;
-
 QueueHandle_t xQueue_Theta;
-
 UBaseType_t uxHighWaterMark;
 
-uint16_t cnt1 =0, cnt2 = 0;
-float sine = 0;
+// ===================== TASKS ================================
 
-void FreeRTOS_Task1(void * pvParameters){
-    static float theta = 3.0;
-    while(1){
-        if(xSemaphoreTake(Semaphore, 1500) == pdTRUE){
+// envia dados pela uart
+void FreeRTOS_Task1(void * pvParameters) {
+    uint16_t receivedChar;
+    unsigned char *msg;
+    uint16_t rxStatus = 0U;
+    //
+    // Send starting message.
+    //
+    msg = "\r\n\n\nHello World!\0";
+    SCI_writeCharArray(SCIA_BASE, (uint16_t*)msg, 17);
+    msg = "\r\nYou will enter a character, and the DSP will echo it back!\n\0";
+    SCI_writeCharArray(SCIA_BASE, (uint16_t*)msg, 62);
 
-            //PHERIPHERAL VARIABLE
-            xSemaphoreGive(Semaphore);
+    for(;;)
+    {
+        msg = "\r\nEnter a character: \0";
+        SCI_writeCharArray(SCIA_BASE, (uint16_t*)msg, 22);
+
+        //
+        // Read a character from the FIFO.
+        //
+        receivedChar = SCI_readCharBlockingFIFO(SCIA_BASE);
+
+        rxStatus = SCI_getRxStatus(SCIA_BASE);
+        if((rxStatus & SCI_RXSTATUS_ERROR) != 0)
+        {
+            //
+            //If Execution stops here there is some error
+            //Analyze SCI_getRxStatus() API return value
+            //
+           // ESTOP0;
         }
 
-        theta += 6.2831853072/400.0;
-        if(theta > 6.2831853071 ) theta -= 6.2831853071;
-        else if(theta < -6.2831853071 ) theta += 6.2831853071;
+        //
+        // Echo back the character.
+        //
+        msg = "  You sent: \0";
+        SCI_writeCharArray(SCIA_BASE, (uint16_t*)msg, 13);
+        SCI_writeCharBlockingFIFO(SCIA_BASE, receivedChar);
 
-        xQueueOverwrite(xQueue_Theta, (void *)&theta);
-        cnt1++;
-        //vTaskDelay(5 / portTICK_PERIOD_MS);
-        //uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
+        //
+        // Increment the loop count variable.
+        //
+        loopCounter++;
     }
 }
 
-void FreeRTOS_Task2(void * pvParameters){
-    float theta = 0;
-    while(1){
-        GPIO_togglePin(34);
-        //GpioDataRegs.GPBTOGGLE.bit.GPIO34 = 1;
-        cnt2++;
-        xQueueReceive(xQueue_Theta, (void *)&theta, 5);
-        sine = __sin(theta);
-
-        vTaskDelay(50 / portTICK_PERIOD_MS);
-        //uxHighWaterMark = uxTaskGetStackHighWaterMark( NULL );
+// Piscar LED Azul
+void FreeRTOS_Task2(void * pvParameters) {
+    // Configura a taxa de atualização (ex: 250ms - pisca mais rápido)
+    const TickType_t xDelay = pdMS_TO_TICKS(250);
+    uint32_t j;
+    
+    for( ;; ) {
+        if(j>= 40000000){ j=0;}else{j++;}
+        // Exemplo de função DriverLib para alternar o estado do pino
+        GPIO_togglePin(LED_BLUE_GPIO);
+        
+        // Bloqueia a task pelo tempo determinado
+        vTaskDelay(xDelay);
     }
 }
+
+// ===================== SETUP ================================
 
 void FreeRTOS_Setup(void){
-    StaticSemaphore_t xSemaphoreBuffer;
-    uint8_t ucQueueStorageArea[1 * sizeof(float)];
+    // CORREÇÃO: Adicionado 'static' para garantir que os buffers persistam na memória
+    static StaticSemaphore_t xSemaphoreBuffer;
+    static uint8_t ucQueueStorageArea[1 * sizeof(float)];
     static StaticQueue_t xStaticQueue;
 
+    // Criação do Mutex Estático
     Semaphore = xSemaphoreCreateMutexStatic(&xSemaphoreBuffer);
-    //xSemaphore = xSemaphoreCreateBinaryStatic(&xSemaphoreBuffer);
-    xSemaphoreGive(Semaphore);
+    
+    // Nota: Mutexes já são criados "dados" (disponíveis). 
+    // Você só precisa de xSemaphoreGive se estivesse usando um Semáforo Binário.
+    // xSemaphoreGive(Semaphore); 
 
-    xQueue_Theta = xQueueCreateStatic(1,sizeof(float),ucQueueStorageArea,&xStaticQueue);
+    // Criação da Fila Estática
+    xQueue_Theta = xQueueCreateStatic(1, sizeof(float), ucQueueStorageArea, &xStaticQueue);
 
-    // Create the task without using any dynamic memory allocation.
-    xTaskCreateStatic(FreeRTOS_Task1,       // Function that implements the task.
-                      "Task1",             // Text name for the task.
-                      STACK_SIZE,           // Number of indexes in the xStack array.
-                      (void *) NULL,        // Parameter passed into the task.
-                      tskIDLE_PRIORITY + 1, // Priority at which the task is created.
+    // Criação das Tasks sem alocação dinâmica
+    xTaskCreateStatic(FreeRTOS_Task1, 
+                      "Task1", 
+                      STACK_SIZE, 
+                      (void *) NULL, 
+                      tskIDLE_PRIORITY + 1, 
                       Task1Stack,
-                      &Task1Buffer);        // Variable to hold the task's data structure.
+                      &Task1Buffer); 
 
-    xTaskCreateStatic(FreeRTOS_Task2,       // Function that implements the task.
-                      "Task2",             // Text name for the task.
-                      STACK_SIZE,           // Number of indexes in the xStack array.
-                      (void *) NULL,        // Parameter passed into the task.
-                      tskIDLE_PRIORITY + 2, // Priority at which the task is created.
+    xTaskCreateStatic(FreeRTOS_Task2, 
+                      "Task2", 
+                      STACK_SIZE, 
+                      (void *) NULL, 
+                      tskIDLE_PRIORITY + 2, // Task 2 tem maior prioridade
                       Task2Stack,
-                      &Task2Buffer);        // Variable to hold the task's data structure.
+                      &Task2Buffer); 
 
+    // Inicia o Scheduler
     vTaskStartScheduler();
 }
 
-// ===================== API ================================
-void vApplicationGetIdleTaskMemory(StaticTask_t **ppxIdleTaskTCBBuffer, 
-                                    StackType_t **ppxIdleTaskStackBuffer,
-                                     StackType_t *puxIdleTaskStackSize){
-   *ppxIdleTaskTCBBuffer = &TaskIdleBuffer;
+// ===================== API / HOOKS ================================
+
+void vApplicationGetIdleTaskMemory(StaticTask_t **ppxIdleTaskTCBBuffer,
+                                    StackType_t **ppxIdleTaskStackBuffer, 
+                                    StackType_t *puxIdleTaskStackSize){
+    *ppxIdleTaskTCBBuffer = &TaskIdleBuffer;
     *ppxIdleTaskStackBuffer = TaskIdleStack;
     *puxIdleTaskStackSize = STACK_SIZE;
 }
 
-void vApplicationStackOverflowHook( TaskHandle_t xTask, char *pcTaskName ){
+void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName){
+    // Se o código parar aqui, aumente o valor de STACK_SIZE
     while(1);
 }
-

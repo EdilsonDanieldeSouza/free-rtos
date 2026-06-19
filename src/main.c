@@ -1,32 +1,26 @@
 #include "driverlib.h"
 #include "device.h"
 #include "Peripheral_Setup.h"
-#include "interruptions.h"
 #include "utils.h"
-
-volatile uint16_t epwmCMPA = 0.5;
-
+#include "FreeRTOS_Tasks.h"
+uint32_t i = 0;
+uint32_t j = 0;
 void main(void)
 {
+
     Device_init();
     Device_initGPIO();
     
     Interrupt_initModule();
     Interrupt_initVectorTable();
-    Interrupt_register(INT_ADCA1, &isr_adc_a1);
 
-    createTable();     
-    initADC();       
-    initADCSOC();      
-    configEPWM1();     
-    configEPWM2();     
-    configEPWM7();     
-
-
+    configLEDS();
+    configUART();
     Interrupt_enable(INT_ADCA1);             
     EINT;
-    ERTM;           
-
+    ERTM;    
+           
+    FreeRTOS_Setup();
     while(1)
     {
        

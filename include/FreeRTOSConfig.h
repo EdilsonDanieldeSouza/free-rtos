@@ -27,11 +27,7 @@
 // Certifique-se de que o valor numérico puro ESTÁ visível para o assembly!
 #define INT_FREERTOS    0x0108
 
-#ifndef __ASSEMBLY__
-    // Coisas exclusivas de C que quebram o assembly ficam aqui dentro
-    #include "inc/hw_ints.h"
-    #include "interrupt.h"
-#endif
+
 //--------------------------------------------------------------------------------------------------
 // Application specific definitions.
 //
@@ -44,7 +40,7 @@
 // See http://www.freertos.org/a00110.html.
 //--------------------------------------------------------------------------------------------------
 
-#define configUSE_PREEMPTION                1
+#define configUSE_PREEMPTION                1 
 #define configUSE_IDLE_HOOK                 0
 #define configUSE_TICK_HOOK                 0
 #define configUSE_MUTEXES                   1
