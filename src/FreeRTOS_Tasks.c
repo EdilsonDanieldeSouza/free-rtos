@@ -138,7 +138,7 @@ void FreeRTOS_Setup(void){
                       "Task1", 
                       STACK_SIZE, 
                       (void *) NULL, 
-                      tskIDLE_PRIORITY + 2,  // Task 1 com prioridade média-alta (UART é crítico)
+                      tskIDLE_PRIORITY + 2,  // Task 1 com prioridade média-alta (para UART)
                       Task1Stack,
                       &Task1Buffer); 
 
