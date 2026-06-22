@@ -7,11 +7,11 @@
 #include "task.h"
 #include "semphr.h"
 
-#define STACK_SIZE configMINIMAL_STACK_SIZE
+#define STACK_SIZE (1024u)
 
 void FreeRTOS_Setup(void);
 
 void FreeRTOS_Task1(void *pvParameters);
-void FreeRTOS_Task1(void *pvParameters);
+void FreeRTOS_Task2(void *pvParameters);
 
 #endif 
