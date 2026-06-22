@@ -93,11 +93,13 @@ void FreeRTOS_Task1(void * pvParameters) {
     }
 }
 
-// Piscar LED Azul
+// Task2 - Pisca LED e envia mensagem pela UART
 void FreeRTOS_Task2(void * pvParameters) {
     // Configura a taxa de atualização (ex: 250ms - pisca mais rápido)
     const TickType_t xDelay = pdMS_TO_TICKS(250);
     uint32_t j = 0;  // INICIALIZADO CORRETAMENTE
+    uint32_t messageCounter = 0;  // Contador de mensagens
+    unsigned char *msg;
     
     for( ;; ) {
         if(j >= 40000000){ 
@@ -109,6 +111,19 @@ void FreeRTOS_Task2(void * pvParameters) {
         
         // Exemplo de função DriverLib para alternar o estado do pino
         GPIO_togglePin(LED_BLUE_GPIO);
+        
+        // Envia mensagem pela UART a cada 1 segundo (4 × 250ms)
+        messageCounter++;
+        if(messageCounter >= 4)
+        {
+            messageCounter = 0;
+            
+            // Protege acesso à UART com Mutex
+            xSemaphoreTake(xMutexUART, portMAX_DELAY);
+            msg = "\r\n[Task2] LED toggled - Message from Task 2!\0";
+            SCI_writeCharArray(SCIA_BASE, (uint16_t*)msg, 46);
+            xSemaphoreGive(xMutexUART);
+        }
         
         // Bloqueia a task pelo tempo determinado
         vTaskDelay(xDelay);
